@@ -1,0 +1,99 @@
+syntax = "proto3";
+
+package mundo.system.point;
+
+option go_package = "github.com/trancecho/mundo-points-system/point";
+
+// 用户信息
+message UserInfo {
+  string user_id = 1;
+  string username = 2;
+  int64 experience = 3; // 当前经验值
+  int64 points = 4; // 当前积分
+  int32 level = 5; // 当前等级
+  bool is_signed = 6; // 是否已签到
+  int32 continuous_sign_days = 7; // 连续签到天数
+  int32 total_sign_days = 8; // 总签到天数
+}
+
+// 积分/经验变更请求
+message UpdatePointsRequest {
+  string user_id = 1;
+  int64 delta_points = 2; // 积分变化量（正加负扣）
+  int64 delta_experience = 3; // 经验变化量
+  string reason = 4; // 变更原因（如"签到"、"发帖"）
+}
+
+// 通用响应
+message CommonResponse {
+  bool success = 1;
+  string message = 2;
+  ErrorCode error_code = 3;
+}
+
+// 点赞请求
+message LikeRequest {
+  string user_id = 1;
+  string post_id = 2;
+  string target_user_id = 3; // 被点赞的用户ID
+}
+
+// 获取用户信息请求
+message GetUserInfoRequest {
+  string user_id = 1;
+}
+
+// 签到请求
+message SignRequest {
+  string user_id = 1;
+}
+
+//签到响应
+message SignResponse {
+  bool success = 1;
+  string message = 2;
+  ErrorCode error_code = 3;
+  int64 points = 4; // 签到获得的积分
+  int64 experience = 5; // 签到获得的经验
+  int32 continuous_sign_days = 6; // 连续签到天数
+}
+
+// 后台统计数据
+message AdminStats {
+  repeated LevelDistribution level_distribution = 1;
+  float avg_points = 2;
+  int64 monthly_points_used = 3;
+}
+
+// 等级分布
+message LevelDistribution {
+  int32 level = 1;
+  int64 user_count = 2;
+}
+
+// 错误码枚举
+enum ErrorCode {
+  UNKNOWN_ERROR = 0;
+  POINTS_INSUFFICIENT = 1; // 积分不足
+  OPERATION_FAILED = 2;
+  INVALID_REQUEST = 3;
+  NONE_ERROR = 4;// 无错误
+}
+
+// 用户服务
+service UserService {
+  // 用户签到
+  rpc Sign(SignRequest) returns (CommonResponse);
+
+  // 更新积分和经验
+  rpc UpdatePointsAndExperience(UpdatePointsRequest) returns (CommonResponse);
+
+  // 获取用户信息
+  rpc GetUserInfo(GetUserInfoRequest) returns (UserInfo);
+
+  // 处理点赞
+  rpc ProcessLike(LikeRequest) returns (CommonResponse);
+
+  // 后台统计接口
+  rpc GetAdminStats(GetUserInfoRequest) returns (AdminStats);
+}
