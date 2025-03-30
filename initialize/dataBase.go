@@ -2,6 +2,7 @@ package initialize
 
 import (
 	"fmt"
+	"github.com/trancecho/mundo-points-system/po"
 	"log"
 
 	"github.com/spf13/viper"
@@ -29,7 +30,7 @@ func InitDB() *gorm.DB {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 
-	err = DB.AutoMigrate()
+	err = DB.AutoMigrate(&po.UserInfo{}, &po.LikeRecord{}, &po.PointRecord{})
 	if err != nil {
 		log.Printf("Database migrate failed: %v", err)
 		return nil

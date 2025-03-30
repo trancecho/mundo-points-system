@@ -21,7 +21,6 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
-// 逻辑：启动Kafka生产者，启动grpc服务，启动WebSocket服务，不启动Kafka消费者。消费者随着client创建
 func main() {
 	// 初始化配置
 	config.InitConfig()
