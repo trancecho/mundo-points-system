@@ -2,6 +2,7 @@ package domain
 
 import (
 	"context"
+	"fmt"
 	"github.com/trancecho/mundo-points-system/pkg/meta"
 	"github.com/trancecho/mundo-points-system/pkg/utils"
 	"github.com/trancecho/mundo-points-system/po"
@@ -9,6 +10,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"strconv"
+	"time"
 )
 
 const LikePoints = int64(1)
@@ -162,4 +164,65 @@ func (s *UserService) GetAdminStats(ctx context.Context, req *v1.GetUserInfoRequ
 	}
 
 	return stats, nil
+}
+
+func (s *UserService) Sign(ctx context.Context, req *v1.SignRequest) (*v1.CommonResponse, error) {
+	_, err := meta.GetMetadata(ctx)
+	if err != nil {
+		return nil, err
+	}
+	//获取用户信息
+	user, err := s.userRepo.GetUserByID(ctx, req.UserId)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "获取用户信息失败: %v", err)
+	}
+	//获取当前时间
+	nowtime := time.Now()
+	//检查用户是否在同一天签到
+	if !user.LastSignDate.IsZero() {
+		lastSignYear, lastSignMonth, lastSignDay := user.LastSignDate.Date()
+		currentYear, currentMonth, currentDay := nowtime.Date()
+
+		// 如果在同一天已经签到
+		if lastSignYear == currentYear && lastSignMonth == currentMonth && lastSignDay == currentDay {
+			return &v1.CommonResponse{
+				Success:   false,
+				Message:   "今日已签到",
+				ErrorCode: v1.ErrorCode_INVALID_REQUEST,
+			}, nil
+		}
+		//检查是否连续签到
+		yesterday := nowtime.AddDate(0, 0, -1)
+		yesterdayYear, yesterdayMonth, yesterdayDay := yesterday.Date()
+		// 如果上次签到不是昨天，连续签到天数重置为1
+		if !(lastSignYear == yesterdayYear && lastSignMonth == yesterdayMonth && lastSignDay == yesterdayDay) {
+			user.ContinuousSignDay = 0 // 重置连续签到次数
+		}
+	}
+	// 计算签到奖励
+	pointsReward := int64(50) // 基础积分奖励
+	expReward := int64(10)    // 基础经验奖励
+
+	// 连续签到奖励加成
+	continuousDay := user.ContinuousSignDay + 1
+	// 更新用户签到信息
+	totalDay := user.TotalSignDay + 1
+
+	err = s.userRepo.UpdateSignStatus(ctx, req.UserId, true, continuousDay, totalDay)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "更新签到状态失败: %v", err)
+	}
+
+	// 添加积分和经验
+	err = s.pointRepo.AddPointsAndExperience(ctx, req.UserId, pointsReward, expReward, "每日签到")
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "添加积分和经验失败: %v", err)
+	}
+
+	// 返回签到成功及奖励信息
+	return &v1.CommonResponse{
+		Success:   true,
+		Message:   fmt.Sprintf("签到成功，获得积分: %d, 经验: %d", pointsReward, expReward),
+		ErrorCode: v1.ErrorCode_NONE_ERROR,
+	}, nil
 }

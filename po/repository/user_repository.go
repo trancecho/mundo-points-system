@@ -3,7 +3,9 @@ package repository
 import (
 	"context"
 	"errors"
+	"github.com/trancecho/mundo-points-system/pkg/utils"
 	"github.com/trancecho/mundo-points-system/po"
+	"google.golang.org/grpc/status"
 	"gorm.io/gorm"
 	"time"
 )
@@ -22,13 +24,57 @@ func NewUserRepository(db *gorm.DB) *UserRepositoryImpl {
 // GetUserByID 通过用户ID获取用户信息
 func (r *UserRepositoryImpl) GetUserByID(ctx context.Context, userID string) (*po.UserInfo, error) {
 	var user po.UserInfo
-	result := r.db.WithContext(ctx).Where("user_id = ?", userID).First(&user)
-	if result.Error != nil {
-		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			return nil, errors.New("用户不存在")
-		}
-		return nil, result.Error
+	tx := r.db.WithContext(ctx).Begin()
+	if tx.Error != nil {
+		return nil, tx.Error
 	}
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	// 尝试直接查询用户
+	err := tx.Where("user_id = ?", userID).First(&user).Error
+
+	// 如果用户不存在，则创建新用户
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		// 从上下文获取用户信息
+		userClaims, ok := ctx.Value("claims").(*utils.Claims)
+		if !ok {
+			tx.Rollback()
+			return nil, status.Errorf(400, "failed to get user claims from context")
+		}
+
+		// 创建新用户
+		newUser := &po.UserInfo{
+			UserID:            userClaims.UserID,
+			Username:          userClaims.Username,
+			Points:            1200,
+			Experience:        0,
+			Level:             1,
+			IsSigned:          false,
+			ContinuousSignDay: 0,
+			TotalSignDay:      0,
+			LastSignDate:      time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC), // 使用UNIX纪元时间
+		}
+
+		if err := tx.Create(newUser).Error; err != nil {
+			tx.Rollback()
+			return nil, err
+		}
+
+		user = *newUser
+	} else if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	// 提交事务
+	if err := tx.Commit().Error; err != nil {
+		return nil, err
+	}
+
 	return &user, nil
 }
 
