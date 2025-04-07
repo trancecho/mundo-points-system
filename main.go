@@ -67,7 +67,7 @@ func main() {
 	}()
 	gatewaySDK := gw_sdk.NewGatewaySDK(viper.GetString("service.name"), viper.GetString("gateway.mundo.myaddr"), "grpc", viper.GetString("gateway.mundo.url"))
 	// 自动注册 gRPC 路由到网关
-	if err = gatewaySDK.AutoRegisterGRPCRoutes(grpcServer, "internal_message"); err != nil {
+	if err = gatewaySDK.AutoRegisterGRPCRoutes(grpcServer, "points_system"); err != nil {
 		log.Printf("无法自动注册gRPC路由: %v", err)
 	} else {
 		log.Println("所有gRPC路由已成功自动注册")

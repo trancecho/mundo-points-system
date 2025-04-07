@@ -2,12 +2,13 @@ package interceptors
 
 import (
 	"context"
+	"strings"
+
 	"github.com/trancecho/mundo-points-system/pkg/utils"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
-	"strings"
 )
 
 // JWTInterceptor 创建一个用于验证JWT的拦截器
