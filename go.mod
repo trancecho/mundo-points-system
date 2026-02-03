@@ -7,6 +7,7 @@ require (
 	github.com/spf13/viper v1.20.0
 	github.com/trancecho/mundo-gateway-sdk v0.0.0-20250322141559-9198302a53ae
 	google.golang.org/grpc v1.71.0
+	google.golang.org/protobuf v1.36.4
 	gorm.io/driver/mysql v1.5.7
 	gorm.io/gorm v1.25.12
 )
@@ -51,6 +52,5 @@ require (
 	golang.org/x/sys v0.29.0 // indirect
 	golang.org/x/text v0.21.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250115164207-1a7da9e5054f // indirect
-	google.golang.org/protobuf v1.36.4 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
