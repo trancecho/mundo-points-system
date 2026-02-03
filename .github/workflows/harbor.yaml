@@ -1,0 +1,110 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+
+      - name: Log in to Harbor
+        run: |
+          echo "${{ secrets.HARBOR_PASSWORD }}" | docker login ${{ secrets.HARBOR_URL }} --username ${{ secrets.HARBOR_USERNAME }} --password-stdin
+
+
+      - name: Build and push Docker image
+        run: |
+          export DOCKER_CONTENT_TRUST=0
+          docker build -t ${{ secrets.HARBOR_URL }}/mundo/points:latest .
+          docker push ${{ secrets.HARBOR_URL }}/mundo/points:latest
+#  deploy-to-k3s:
+#    runs-on: ubuntu-latest
+#    needs: build-and-push
+#    steps:
+#      - name: Checkout code
+#        uses: actions/checkout@v3
+#
+#      - name: Set up kubectl
+#        uses: azure/setup-kubectl@v3
+#        with:
+#          version: 'latest'
+#
+#      - name: Configure kubeconfig
+#        run: |
+#          mkdir -p ~/.kube
+#          echo "${{ secrets.KUBECONFIG }}" > ~/.kube/config
+#      - name: Deploy to k3s
+#        run: |
+#          kubectl apply -f deployment.yaml
+
+
+#name: CI/CD Pipeline
+#
+#on:
+#  push:
+#    branches:
+#      - main
+#
+#jobs:
+#  build_and_deploy:
+#    runs-on: ubuntu-22.04
+#    #    runs-on: self-hosted
+#    steps:
+#      # 检出代码
+#      - name: Checkout code
+#        uses: actions/checkout@v2
+#      # 设置 Go 环境
+#      - name: Set up Go
+#        uses: actions/setup-go@v3
+#        with:
+#          go-version: '1.23'
+#
+#      # 安装依赖
+#      - name: Install dependencies
+#        run: go mod tidy
+#
+#      # 编译 Go 程序
+#      - name: Build Go application
+#        run: go build -ldflags "-s -w" -o ./mundo ./main.go
+#
+#      # Compress the binary
+#      - name: Compress the binary
+#        run: gzip -k ./mundo
+#
+#      # 设置 SSH 连接
+#      - name: Setup SSH
+#        uses: webfactory/ssh-agent@v0.7.0
+#        with:
+#          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+#
+#      - name: Stop mundo
+#        #        run: ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} 'pkill -f mundo' || true
+#        run: |
+#          ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
+#          # 停止旧的screen会话（如果存在）
+#          screen -S mundo -X quit || true
+#
+#      # 传输编译后的二进制文件到服务器
+#      - name: Transfer binary to JD Cloud Server
+#        run: scp -C -o StrictHostKeyChecking=no ./mundo.gz ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/root/mundo/
+#
+#      # 在服务器上运行二进制文件
+#      - name: Deploy on JD Cloud Server
+#        run: |
+#          ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
+#          # 目录切换到/root/mundo
+#          cd /root/mundo
+#          # Decompress the binary
+#          gunzip -f ./mundo.gz
+#          # 启动新的screen会话并运行程序
+#          screen -dmS mundo ./mundo
+#          EOF
