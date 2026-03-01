@@ -7,6 +7,7 @@ type UserRepository interface {
 	GetUserByID(ctx context.Context, userID string) (*UserInfo, error)
 	UpdateSignStatus(ctx context.Context, userID string, isSigned bool, continuousDay int32, totalDay int32) error
 	UpdateLevelByExperience(ctx context.Context, userID string) error
+	UpdateActivityScore(ctx context.Context, userID string, deltaScore int64) error
 }
 
 // PointRepository 积分仓库接口

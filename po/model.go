@@ -14,6 +14,7 @@ type UserInfo struct {
 	ContinuousSignDay int32     `gorm:"column:continuous_sign_day;not null;default:0"`
 	TotalSignDay      int32     `gorm:"column:total_sign_day;not null;default:0"`
 	LastSignDate      time.Time `gorm:"column:last_sign_date"`
+	ActivityScore     int64     `gorm:"column:activity_score;default:0"`
 }
 
 // PointRecord 积分记录模型

@@ -3,14 +3,16 @@ package domain
 import (
 	"context"
 	"fmt"
+	"log"
+	"strconv"
+	"time"
+
 	"github.com/trancecho/mundo-points-system/pkg/meta"
 	"github.com/trancecho/mundo-points-system/pkg/utils"
 	"github.com/trancecho/mundo-points-system/po"
 	v1 "github.com/trancecho/mundo-points-system/proto/point/v1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"strconv"
-	"time"
 )
 
 const LikePoints = int64(1)
@@ -91,6 +93,7 @@ func (s *UserService) GetUserInfo(ctx context.Context, req *v1.GetUserInfoReques
 		Level:              int32(user.Level),
 		ContinuousSignDays: user.ContinuousSignDay,
 		TotalSignDays:      user.TotalSignDay,
+		ActivityScore:      user.ActivityScore,
 	}, nil
 }
 
@@ -200,11 +203,31 @@ func (s *UserService) Sign(ctx context.Context, req *v1.SignRequest) (*v1.Common
 		}
 	}
 	// 计算签到奖励
-	pointsReward := int64(50) // 基础积分奖励
-	expReward := int64(10)    // 基础经验奖励
+	pointsReward := int64(50)  // 基础积分奖励
+	expReward := int64(10)     // 基础经验奖励
+	activityReward := int64(5) // 基础活跃度奖励
 
 	// 连续签到奖励加成
 	continuousDay := user.ContinuousSignDay + 1
+
+	// 根据活跃度计算加成
+	activityBonus := 0.0
+
+	// 直接使用 user.ActivityScore
+	if user.ActivityScore >= 10000 {
+		activityBonus = 0.5
+	} else if user.ActivityScore >= 5000 {
+		activityBonus = 0.3
+	} else if user.ActivityScore >= 2000 {
+		activityBonus = 0.2
+	} else if user.ActivityScore >= 500 {
+		activityBonus = 0.1
+	}
+
+	// 应用活跃度加成
+	pointsReward = pointsReward + int64(float64(pointsReward)*activityBonus)
+	expReward = expReward + int64(float64(expReward)*activityBonus)
+
 	// 更新用户签到信息
 	totalDay := user.TotalSignDay + 1
 
@@ -219,10 +242,17 @@ func (s *UserService) Sign(ctx context.Context, req *v1.SignRequest) (*v1.Common
 		return nil, status.Errorf(codes.Internal, "添加积分和经验失败: %v", err)
 	}
 
+	// 直接更新用户活跃度
+	err = s.userRepo.UpdateActivityScore(ctx, req.UserId, activityReward)
+	if err != nil {
+		// 只记录日志，不影响签到主流程
+		log.Printf("更新用户活跃度失败: %v", err)
+	}
+
 	// 返回签到成功及奖励信息
 	return &v1.CommonResponse{
 		Success:   true,
-		Message:   fmt.Sprintf("签到成功，获得积分: %d, 经验: %d", pointsReward, expReward),
+		Message:   fmt.Sprintf("签到成功，获得积分: %d, 经验: %d, 活跃度: %d", pointsReward, expReward, activityReward),
 		ErrorCode: v1.ErrorCode_NONE_ERROR,
 	}, nil
 }
