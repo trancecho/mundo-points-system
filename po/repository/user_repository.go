@@ -3,11 +3,12 @@ package repository
 import (
 	"context"
 	"errors"
+	"time"
+
 	"github.com/trancecho/mundo-points-system/pkg/utils"
 	"github.com/trancecho/mundo-points-system/po"
 	"google.golang.org/grpc/status"
 	"gorm.io/gorm"
-	"time"
 )
 
 type UserRepositoryImpl struct {
@@ -167,4 +168,10 @@ func calculateLevelByExperience(experience int64) int32 {
 	} else {
 		return 10
 	}
+}
+
+func (r *UserRepositoryImpl) UpdateActivityScore(ctx context.Context, userID string, deltaScore int64) error {
+	return r.db.WithContext(ctx).Model(&po.UserInfo{}).
+		Where("user_id = ?", userID).
+		Update("activity_score", gorm.Expr("activity_score + ?", deltaScore)).Error
 }

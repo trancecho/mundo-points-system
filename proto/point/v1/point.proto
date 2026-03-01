@@ -14,6 +14,7 @@ message UserInfo {
   bool is_signed = 6; // 是否已签到
   int32 continuous_sign_days = 7; // 连续签到天数
   int32 total_sign_days = 8; // 总签到天数
+  int64 activity_score = 9; // 当前活跃度
 }
 
 // 积分/经验变更请求
